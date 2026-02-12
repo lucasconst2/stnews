@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ST News - Pro Telemetry Sim</title>
+    <style>
+        :root { --neon-blue: #00d4ff; --neon-red: #ff2a6d; --neon-green: #39ff14; --bg-dark: #0a0a0c; }
+        body { background: var(--bg-dark); color: white; font-family: 'share tech mono', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        
+        #main-container { display: flex; gap: 20px; padding: 20px; background: #111; border-radius: 20px; border: 1px solid #333; position: relative; }
+        canvas { background: #000; border-radius: 10px; box-shadow: inset 0 0 20px rgba(0,0,0,1); }
+
+        #dashboard { width: 250px; display: flex; flex-direction: column; gap: 15px; }
+        .data-card { background: #1a1a1a; padding: 12px; border-left: 4px solid var(--neon-blue); border-radius: 5px; }
+        .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .value { font-size: 20px; font-weight: bold; color: #eee; }
+        
+        .bar-container { width: 100%; height: 8px; background: #333; margin-top: 5px; border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.2s; }
+        
+        .screen { position: absolute; top: 20px; left: 20px; width: 350px; height: 550px; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; border-radius: 10px; }
+        .hidden { display: none !important; }
+        button { background: var(--neon-blue); border: none; padding: 10px 25px; color: black; font-weight: bold; cursor: pointer; margin-top: 15px; border-radius: 4px; }
+        button:hover { background: white; }
+    </style>
+</head>
+<body>
+
+    <div id="main-container">
+        <div id="start-screen" class="screen">
+            <h2 style="color: var(--neon-blue)">TELEMETRY SYSTEM v2.0</h2>
+            <p>WASD ou Setas para pilotar</p>
+            <button onclick="startGame()">Engatar Primeira</button>
+        </div>
+
+        <canvas id="road"></canvas>
+
+        <aside id="dashboard">
+            <div class="data-card">
+                <div class="label">Velocidade Atual</div>
+                <div class="value"><span id="speed-val">0</span> <small>KM/H</small></div>
+            </div>
+
+            <div class="data-card" style="border-color: var(--neon-green)">
+                <div class="label">Combustível (Fuel)</div>
+                <div class="value"><span id="fuel-val">100</span>%</div>
+                <div class="bar-container"><div id="fuel-bar" class="bar-fill" style="background: var(--neon-green)"></div></div>
+            </div>
+
+            <div class="data-card" style="border-color: #ff9100">
+                <div class="label">Temp. Motor (Engine)</div>
+                <div class="value"><span id="temp-val">70</span>°C</div>
+                <div class="bar-container"><div id="temp-bar" class="bar-fill" style="background: #ff9100"></div></div>
+            </div>
+
+            <div class="data-card" id="brake-card">
+                <div class="label">Pressão de Freio</div>
+                <div class="value" id="brake-val">OFF</div>
+            </div>
+
+            <div class="data-card" style="border-color: var(--neon-red)">
+                <div class="label">Distância Percorrida</div>
+                <div class="value"><span id="dist-val">0</span> <small>m</small></div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+    const canvas = document.getElementById('road');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 350; 
+    canvas.height = 550;
+
+    let gameActive = false;
+    let keys = {};
+    let car = { x: 150, y: 450, w: 40, h: 75, speed: 0, fuel: 100, temp: 75, dist: 0 };
+    let enemy = { x: 100, y: -100, w: 40, h: 75 };
+    let offset = 0;
+
+    function startGame() {
+        gameActive = true;
+        car = { x: 150, y: 450, w: 40, h: 75, speed: 0, fuel: 100, temp: 75, dist: 0 };
+        enemy.y = -100;
+        document.getElementById('start-screen').classList.add('hidden');
+        update();
+    }
+
+    function update() {
+        if(!gameActive) return;
+
+        // Aceleração e Consumo
+        if ((keys["ArrowUp"] || keys["w"]) && car.fuel > 0) {
+            car.speed += 0.15;
+            car.fuel -= 0.015;
+            car.temp += 0.05;
+        } else {
+            car.speed *= 0.98;
+            car.temp -= 0.02;
+        }
+
+        // Freio
+        if (keys["ArrowDown"] || keys["s"]) {
+            car.speed *= 0.92;
+            document.getElementById('brake-card').style.background = "#331111";
+            document.getElementById('brake-val').innerText = "85%";
+        } else {
+            document.getElementById('brake-card').style.background = "#1a1a1a";
+            document.getElementById('brake-val').innerText = "OFF";
+        }
+
+        // Movimento lateral
+        if (keys["ArrowLeft"] || keys["a"]) car.x -= 5;
+        if (keys["ArrowRight"] || keys["d"]) car.x += 5;
+
+        // Travas de segurança dos valores
+        if(car.speed < 0) car.speed = 0;
+        if(car.speed > 12) car.speed = 12;
+        if(car.temp < 70) car.temp = 70;
+        if(car.fuel < 0) car.fuel = 0;
+        
+        car.dist += car.speed * 0.1;
+
+        // Movimento do inimigo baseado na velocidade do player
+        enemy.y += car.speed + 2; 
+        if(enemy.y > canvas.height) {
+            enemy.y = -100;
+            enemy.x = 30 + Math.random() * (canvas.width - 70);
+        }
+
+        // Colisão
+        if (car.x < enemy.x + enemy.w && car.x + car.w > enemy.x &&
+            car.y < enemy.y + enemy.h && car.y + car.h > enemy.y) {
+            gameActive = false;
+            alert("BATIDA! Velocidade no impacto: " + Math.floor(car.speed * 28) + " KM/H");
+            location.reload();
+        }
+
+        updateUI();
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function updateUI() {
+        document.getElementById('speed-val').innerText = Math.floor(car.speed * 28);
+        document.getElementById('fuel-val').innerText = Math.max(0, car.fuel).toFixed(1);
+        document.getElementById('fuel-bar').style.width = Math.max(0, car.fuel) + "%";
+        document.getElementById('temp-val').innerText = car.temp.toFixed(0);
+        document.getElementById('temp-bar').style.width = Math.min((car.temp - 70) * 3, 100) + "%";
+        document.getElementById('dist-val').innerText = car.dist.toFixed(0);
+    }
+
+    function draw() {
+        // Limpa e reseta sombras para evitar rastro visual
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#111"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Desenha a estrada
+        offset = (offset + car.speed) % 60;
+        ctx.strokeStyle = "#333";
+        ctx.setLineDash([30, 30]);
+        ctx.lineDashOffset = -offset;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0); 
+        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reseta o tracejado para os carros
+
+        // Desenha Carro do Jogador
+        ctx.save();
+        ctx.fillStyle = (keys["ArrowDown"] || keys["s"]) ? "#ff4444" : "#00d4ff"; 
+        ctx.shadowBlur = 15; 
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(car.x, car.y, car.w, car.h);
+        ctx.restore();
+        
+        // Desenha Carro Inimigo
+        ctx.fillStyle = "#555";
+        ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+    }
+
+    window.onkeydown = (e) => keys[e.key] = true;
+    window.onkeyup = (e) => keys[e.key] = false;
+</script>
+</body>
+</html>

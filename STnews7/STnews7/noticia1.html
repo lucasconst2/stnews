@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetria - STnews</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container-full {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            background: #111;
+            border-radius: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        iframe {
+            border: 2px solid #00d4ff;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Telemetria em Tempo Real</h1>
+            <a href="index.html" style="color: #00d4ff; text-decoration: none;">← Voltar ao Início</a>
+        </header>
+
+        <div class="game-container-full">
+            <h2 style="margin-bottom: 20px;">Simulador de Telemetria Interativo</h2>
+            <iframe src="jogohtml.html" width="650" height="600" frameborder="0" scrolling="no"></iframe>
+        </div>
+    </div>
+</body>
+</html>
